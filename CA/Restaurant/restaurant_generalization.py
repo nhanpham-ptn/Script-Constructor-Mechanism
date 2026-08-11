@@ -7,7 +7,7 @@ parent_dir = Path(__file__).resolve().parent.parent
 # Add the parent directory to sys.path
 sys.path.append(str(parent_dir))
 
-from conceptualAnalyzer import CDEvent, Story
+from conceptualAnalyzer import Story
 import string
 ONTOLOGY = {
     "PATRON": {"john", "mary","alex", "sara", "tom", "linda", "peter", "anna", "mike", "emma"}, 
@@ -34,7 +34,7 @@ def classify(story: list[str]) -> list[str]:
             suffix = word[len(stripped):] 
             for role, words in ONTOLOGY.items():
                 if stripped.lower() in words:
-                    components[i] = role + suffix
+                    components[i] = role.lower() + suffix
                     break
         return " ".join(components)
         
@@ -60,14 +60,29 @@ if __name__ == "__main__":
     ]
 
     story = generalize(main_path)
-     
         # walk to the last node in the main chain (the "ate" event) and
         # attach two alternate continuations from there
     last = story
     while last.proceed:
         last = last.proceed[0]
-     
-    last.add_branch(classify(["John paid the waiter."]))
-    last.add_branch(classify(["John paid the waiter."]))
-     
+
+    print(story)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     print(story)
