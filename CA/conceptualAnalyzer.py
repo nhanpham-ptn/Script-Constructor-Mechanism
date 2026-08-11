@@ -31,11 +31,13 @@ TIME_WORDS = {"yesterday", "today", "tomorrow", "now", "then", "later",
 #Making CDEvent class 
 class CDEvent:
     sentence: str
-    actor:str = None
-    act: str
-    CD: str
-    instrument:str = None
+    actor: str = None
+    act: str = None
+    CD: str = None
+    instrument: str = None
     dobject: str = None
+    to_role: str = None     # recipient -- who receives/is told/is given something
+    from_role: str = None   # source -- who something came from
     location: str = None
     time: str = None
 
@@ -46,17 +48,36 @@ class CDEvent:
         for token in doc:
             if token.dep_ == "nsubj":
                 self.actor = token.text
-
-            elif token.dep_ == "dobj"and token.head.dep_ == "ROOT":
+ 
+            elif token.dep_ == "dobj" and token.head.dep_ == "ROOT":
                 self.dobject = token.text
-
-            elif token.dep_ == "pobj" or token.head.dep_ == "prep" or token.dep_ == "dative":
-                self.location = token.text
-
+ 
+            elif token.dep_ in ("dative", "iobj"):
+                # e.g. "gave John a menu" -- John is the recipient
+                self.to_role = token.text
+ 
+            elif token.dep_ == "pobj":
+                # look at which preposition governs this object to
+                # decide which role it fills, instead of dumping
+                # everything into one generic "location" slot
+                prep = token.head.text.lower() if token.head.dep_ == "prep" else ""
+                if prep in ("to",):
+                    self.to_role = token.text
+                elif prep == "from":
+                    self.from_role = token.text
+                elif prep == "with":
+                    self.instrument = token.text
+                elif prep in ("at", "in"):
+                    self.location = token.text
+                else:
+                    # unrecognized preposition -- keep old fallback
+                    # behavior rather than silently dropping it
+                    self.location = token.text
+ 
             elif token.dep_ == "ROOT":
-                self.act = token.head.lemma_
-                self.CD = VERB_TO_PRIMITIVE.get(token.head.lemma_)
-
+                self.act = token.lemma_
+                self.CD = VERB_TO_PRIMITIVE.get(token.lemma_)
+ 
             elif token.text.lower() in TIME_WORDS:
                 self.time = token.text
 
@@ -67,12 +88,13 @@ class CDEvent:
 
 #Transforming the CD objects into 
     def to_dict(self):
-        d = {"ACT": self.act}
-        d["CD"] = self.CD
+        d = {"ACT": self.act, "CD": self.CD}
         if self.actor:      d["ACTOR"] = self.actor
-        if self.dobject:     d["OBJECT"] = self.dobject
+        if self.dobject:    d["OBJECT"] = self.dobject
+        if self.to_role:    d["TO"] = self.to_role
+        if self.from_role:  d["FROM"] = self.from_role
         if self.instrument: d["INSTRUMENT"] = self.instrument
-        if self.location:      d["LOCATION"] = self.location
+        if self.location:   d["LOCATION"] = self.location
         if self.time:       d["TIME"] = self.time
         return d
 
