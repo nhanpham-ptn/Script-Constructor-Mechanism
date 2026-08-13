@@ -27,6 +27,9 @@ VERB_TO_PRIMITIVE = {
  
 TIME_WORDS = {"yesterday", "today", "tomorrow", "now", "then", "later",
               "afterward", "afterwards", "eventually", "finally"}
+
+PAY_LIKE_VERBS = {"pay", "tip"}
+IMPLICIT_TRANSFER_ITEM = "MONEY"
  
 #Making CDEvent class 
 class CDEvent:
@@ -53,15 +56,11 @@ class CDEvent:
                 self.dobject = token.text
  
             elif token.dep_ in ("dative", "iobj"):
-                # e.g. "gave John a menu" -- John is the recipient
                 self.to_role = token.text
  
             elif token.dep_ == "pobj":
-                # look at which preposition governs this object to
-                # decide which role it fills, instead of dumping
-                # everything into one generic "location" slot
                 prep = token.head.text.lower() if token.head.dep_ == "prep" else ""
-                if prep in ("to",):
+                if prep == "to":
                     self.to_role = token.text
                 elif prep == "from":
                     self.from_role = token.text
@@ -70,8 +69,6 @@ class CDEvent:
                 elif prep in ("at", "in"):
                     self.location = token.text
                 else:
-                    # unrecognized preposition -- keep old fallback
-                    # behavior rather than silently dropping it
                     self.location = token.text
  
             elif token.dep_ == "ROOT":
@@ -80,6 +77,16 @@ class CDEvent:
  
             elif token.text.lower() in TIME_WORDS:
                 self.time = token.text
+ 
+        # Post-processing role correction: runs after the full loop,
+        # since self.act needs to be reliably known first, and word
+        # order doesn't guarantee the ROOT verb is seen before its
+        # dobj. Only applies if TO wasn't already set explicitly
+        # (e.g. "paid money to the waiter" already has this right via
+        # the pobj branch above -- don't clobber that).
+        if self.act in PAY_LIKE_VERBS and self.dobject and not self.to_role:
+            self.to_role = self.dobject
+            self.dobject = IMPLICIT_TRANSFER_ITEM
 
 #Initializing the CD objects
     def __init__(self, text: str):
@@ -134,10 +141,11 @@ if __name__ == "__main__":
         "The waiter gave John a menu.",
         "John ordered a burger.",
         "John ate the burger.",
+        "John paid the waiter.",
+        "John left the restaurant.",
     ]
  
-    story = Story(main_path)
- 
+    story = Story(main_path) 
     last = story
     while last.proceed:
         last = last.proceed[0]
