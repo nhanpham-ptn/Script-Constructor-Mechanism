@@ -73,7 +73,7 @@ def maximal_patterns(db: list[list[tuple]],  min_support:int = 2):
 
     #For individual edges
     max_support = max((support for support, _ in edge_chains), default=0)
-    edge_chains = [(support, pattern) for support, pattern in edge_chains if support == max_support
+    edge_chains = [(support, pattern) for support, pattern in edge_chains if support == max_support]
     branch_nums = 1
     for (frequency, pattern) in edge_chains:
         script[f"branch {branch_nums}"] = pattern
