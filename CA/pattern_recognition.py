@@ -10,7 +10,7 @@ from prefixspan import PrefixSpan
 from collections import defaultdict, Counter
 from typing import Optional
 from conceptualAnalyzer import CDEvent, Story
-from restaurant_generalization import generalize, classify
+from Restaurant.restaurant_generalization import generalize, classify
 
 import pattern_recognition
 print("Loaded from:", pattern_recognition.__file__)
@@ -54,7 +54,6 @@ def maximal_patterns(db: list[list[tuple]],  min_support:int = 2):
     all_patterns = ps.frequent(min_support)
     script = {}
 
-
     edge_length = 2
     if all_patterns:
         max_len = max(len(pattern) for _, pattern in all_patterns)
@@ -74,11 +73,18 @@ def maximal_patterns(db: list[list[tuple]],  min_support:int = 2):
 
     #For individual edges
     max_support = max((support for support, _ in edge_chains), default=0)
-    edge_chains = [(support, pattern) for support, pattern in edge_chains if support == max_support]
-
+    edge_chains = [(support, pattern) for support, pattern in edge_chains if support == max_support
     branch_nums = 1
     for (frequency, pattern) in edge_chains:
         script[f"branch {branch_nums}"] = pattern
         branch_nums += 1
-
     return script
+
+
+
+
+
+
+
+
+
