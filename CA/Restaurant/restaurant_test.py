@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 
+
 # Locate the parent directory of the current script
 parent_dir = Path(__file__).resolve().parent.parent
 
@@ -12,6 +13,7 @@ from typing import Optional
 from conceptualAnalyzer import CDEvent, Story
 from restaurant_generalization import generalize, classify
 from pattern_recognition import maximal_patterns, story_to_sequences
+import inspect
 
 
 RESTAURANT_STORIES = [
@@ -126,7 +128,14 @@ if __name__ == "__main__":
     for story in RESTAURANT_STORIES:
         generalization = generalize(story)
         sequence += story_to_sequences(generalization)
+        
+    #sequences_to_story(sequence)
+        
+    output = maximal_patterns(sequence,  (max(2, len(RESTAURANT_STORIES) // 5)))
          
-    for label, pattern in maximal_patterns(sequence,  (max(2, len(RESTAURANT_STORIES) // 5))).items():
-        print(label, "->", pattern)
-
+    for pattern in output.get("main_script", []):
+        print(pattern)
+        
+    print("\n\n\n")
+    for i in range(1, len(output.keys() - {"main_script"})):
+        print(f"Branch {i}: {output.get(f'branch_{i}', [])}")

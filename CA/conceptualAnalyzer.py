@@ -1,6 +1,19 @@
 from __future__ import annotations
 import spacy
 
+'''
+This is the 4th version of the conceptual analyzer. It is designed to extract the components of a sentence and represent them in a structured format. 
+The main classes are CDEvent and Story, which represent individual events and sequences of events, respectively. 
+The analyzer uses spaCy for natural language processing and includes a mapping of verbs to primitive actions (CDs) for classification.
+
+However, there were some problems not with breaking down the sentences into components but rather transforming them back into a story. 
+The previous version of the code was not able to specify the difference between "entering" and "leaving" a restaurant, because they were both classified as PTRANS.
+The CD ATRANS was also so vague that it was not able to specify the difference between "paying" a staff and "giving" something, because they were both classified as ATRANS.
+
+'''
+
+
+
 # Load the small English model
 nlp = spacy.load("en_core_web_sm")
 
@@ -30,6 +43,9 @@ TIME_WORDS = {"yesterday", "today", "tomorrow", "now", "then", "later",
 
 PAY_LIKE_VERBS = {"pay", "tip"}
 IMPLICIT_TRANSFER_ITEM = "MONEY"
+
+ENTER_LIKE_VERBS = {"enter", "arrive"}
+LEAVE_LIKE_VERBS = {"leave", "exit"}
  
 #Making CDEvent class 
 class CDEvent:
@@ -60,7 +76,7 @@ class CDEvent:
  
             elif token.dep_ == "pobj":
                 prep = token.head.text.lower() if token.head.dep_ == "prep" else ""
-                if prep == "to":
+                if prep in ("to", "into"):
                     self.to_role = token.text
                 elif prep == "from":
                     self.from_role = token.text
@@ -78,16 +94,26 @@ class CDEvent:
             elif token.text.lower() in TIME_WORDS:
                 self.time = token.text
  
-        # Post-processing role correction: runs after the full loop,
-        # since self.act needs to be reliably known first, and word
-        # order doesn't guarantee the ROOT verb is seen before its
-        # dobj. Only applies if TO wasn't already set explicitly
-        # (e.g. "paid money to the waiter" already has this right via
-        # the pobj branch above -- don't clobber that).
+        # --- Post-processing verb-specific role corrections ---
+        # Run after the full loop: self.act needs to be reliably
+        # known first, and word order doesn't guarantee ROOT is seen
+        # before dobj.
+ 
+        # pay/tip: dobj is the recipient, not a transferred item
         if self.act in PAY_LIKE_VERBS and self.dobject and not self.to_role:
             self.to_role = self.dobject
             self.dobject = IMPLICIT_TRANSFER_ITEM
-
+ 
+        # enter/arrive: dobj is the GOAL of motion, not an object
+        elif self.act in ENTER_LIKE_VERBS and self.dobject and not self.to_role:
+            self.to_role = self.dobject
+            self.dobject = None
+ 
+        # leave/exit: dobj is the SOURCE being left, not an object
+        elif self.act in LEAVE_LIKE_VERBS and self.dobject and not self.from_role:
+            self.from_role = self.dobject
+            self.dobject = None
+            
 #Initializing the CD objects
     def __init__(self, text: str):
         self.sentence = text
@@ -145,7 +171,8 @@ if __name__ == "__main__":
         "John left the restaurant.",
     ]
  
-    story = Story(main_path) 
+    story = Story(main_path)
+ 
     last = story
     while last.proceed:
         last = last.proceed[0]
